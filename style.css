@@ -1,0 +1,98 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #ffffff; /* Fundo suave verde mente */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(72, 75, 74, 0.20); /* Sombra levemente esverdeada */
+    width: 100%;
+    max-width: 400px;
+}
+
+h1 {
+    text-align: center;
+    color: #065f46; /* Verde escuro para contraste */
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+.input-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+}
+
+input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #a7f3d0; /* Borda verde clara */
+    border-radius: 6px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input:focus {
+    border-color: #10b981; /* Verde principal ao selecionar o campo */
+}
+
+button#addBtn {
+    padding: 10px 16px;
+    background-color: #10b981; /* Verde esmeralda */
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+button#addBtn:hover {
+    background-color: #059669; /* Verde mais escuro ao passar o mouse */
+}
+
+ul {
+    list-style: none;
+}
+
+li {
+    background: #f0fdf4; /* Fundo levemente verde no item */
+    padding: 10px 12px;
+    border: 1px solid #dcfce7;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #064e3b;
+    word-break: break-word;
+}
+
+.delete-btn {
+    background-color: #ef4444;
+    color: #ffffff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-left: 8px;
+    transition: background 0.2s;
+}
+
+.delete-btn:hover {
+    background-color: #dc2626;
+}
