@@ -66,6 +66,7 @@
       if (!error) {
         document.getElementById('task-title').value = '';
         document.getElementById('student-name').value = '';
+        document.getElementById('comentario').value = '';
         loadTasks();
       }
     }
