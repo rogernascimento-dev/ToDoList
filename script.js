@@ -7,18 +7,35 @@ let isTeacher = false;
 // Monitora se o professor está logado
 supabaseClient.auth.onAuthStateChange((event, session) => {
   isTeacher = !!session;
-  document.getElementById('teacher-panel').classList.toggle('hidden', !isTeacher);
-  document.getElementById('btn-logout').classList.toggle('hidden', !isTeacher);
-  document.getElementById('btn-login-toggle').classList.toggle('hidden', isTeacher);
-  document.getElementById('login-modal').classList.add('hidden');
+  
+  const teacherPanel = document.getElementById('teacher-panel');
+  const btnLogout = document.getElementById('btn-logout');
+  const btnLoginToggle = document.getElementById('btn-login-toggle');
+  const loginModal = document.getElementById('login-modal');
+
+  if (teacherPanel) teacherPanel.classList.toggle('hidden', !isTeacher);
+  if (btnLogout) btnLogout.classList.toggle('hidden', !isTeacher);
+  if (btnLoginToggle) btnLoginToggle.classList.toggle('hidden', isTeacher);
+  if (loginModal) loginModal.classList.add('hidden');
+
   loadTasks();
 });
 
 async function handleLogin() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) document.getElementById('login-error').innerText = "Dados inválidos.";
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const errorEl = document.getElementById('login-error');
+
+  if (!emailInput || !passwordInput) return;
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: emailInput.value,
+    password: passwordInput.value
+  });
+
+  if (error && errorEl) {
+    errorEl.innerText = "Dados inválidos.";
+  }
 }
 
 async function handleLogout() {
@@ -26,21 +43,25 @@ async function handleLogout() {
 }
 
 function toggleLoginModal() {
-  document.getElementById('login-modal').classList.toggle('hidden');
+  const loginModal = document.getElementById('login-modal');
+  if (loginModal) loginModal.classList.toggle('hidden');
 }
 
 async function loadTasks() {
   const { data: tasks, error } = await supabaseClient.from('tasks').select('*');
-  if (error) return console.error("Erro ao carregar tarefas:", error);
+  
+  if (error) {
+    console.error("Erro ao carregar tarefas:", error);
+    return;
+  }
 
   document.querySelectorAll('.cards').forEach(el => el.innerHTML = '');
 
-  tasks.forEach(task => {
+  (tasks || []).forEach(task => {
     const card = document.createElement('div');
     card.className = 'card';
     
     let actionsHTML = '';
-    // Mostra botões de mover e excluir apenas para o professor
     if (isTeacher) {
       actionsHTML = `
         <div class="card-actions">
@@ -52,7 +73,6 @@ async function loadTasks() {
       `;
     }
 
-    // Exibe o comentário apenas se ele existir no banco
     const comentarioHTML = task.comentario 
       ? `<p class="card-comment" style="margin-top: 6px; font-size: 0.85rem; color: #475569;">💬 ${task.comentario}</p>` 
       : '';
@@ -72,18 +92,27 @@ async function loadTasks() {
 }
 
 async function createTask() {
-  const title = document.getElementById('task-title').value.trim();
-  const student = document.getElementById('student-name').value.trim();
-  const comentario = document.getElementById('comentario').value.trim();
+  const titleInput = document.getElementById('task-title');
+  const studentInput = document.getElementById('student-name');
+  const comentarioInput = document.getElementById('comentario');
+
+  if (!titleInput || !studentInput) {
+    alert("Erro: Elementos do formulário não foram encontrados no HTML.");
+    return;
+  }
+
+  const title = titleInput.value.trim();
+  const student = studentInput.value.trim();
+  const comentario = comentarioInput ? comentarioInput.value.trim() : '';
 
   if (!title || !student) {
     alert("Preencha pelo menos o título e o nome do aluno!");
     return;
   }
 
-  const { data, error } = await supabaseClient.from('tasks').insert([
+  const { error } = await supabaseClient.from('tasks').insert([
     { 
-      title, 
+      title: title, 
       student_name: student, 
       comentario: comentario, 
       status: 'todo' 
@@ -94,9 +123,9 @@ async function createTask() {
     console.error("Erro no Supabase:", error);
     alert("Erro ao salvar no banco: " + error.message);
   } else {
-    document.getElementById('task-title').value = '';
-    document.getElementById('student-name').value = '';
-    document.getElementById('comentario').value = '';
+    titleInput.value = '';
+    studentInput.value = '';
+    if (comentarioInput) comentarioInput.value = '';
     loadTasks();
   }
 }
