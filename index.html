@@ -22,14 +22,14 @@
     <input type="email" id="email" placeholder="E-mail"><br><br>
     <input type="password" id="password" placeholder="Senha"><br><br>
     <button onclick="handleLogin()">Entrar</button>
-    <p id="login-error" style="color:red; font-size:12px;"></p>
+    <p id="login-error"></p>
   </div>
 
   <!-- PAINEL EXCLUSIVO DO PROFESSOR (Escondido por padrão) -->
   <div id="teacher-panel" class="admin-panel hidden">
     <h3>Novo Projeto</h3>
-    <input type="text" id="task-title" placeholder="Nome do Projeto / Tarefa" style="width: 250px; padding: 6px;">
-    <input type="text" id="student-name" placeholder="Nome do Aluno" style="width: 200px; padding: 6px;">
+    <input type="text" id="task-title" placeholder="Nome do Projeto / Tarefa">
+    <input type="text" id="student-name" placeholder="Nome do Aluno">
     <button onclick="createTask()">Cadastrar</button>
   </div>
 
