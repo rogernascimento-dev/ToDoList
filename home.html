@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Kanban de Projetos</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: sans-serif; display: flex; gap: 20px; padding: 20px; background: #f4f5f7; }
+    .column { flex: 1; background: #ebecf0; padding: 15px; border-radius: 8px; min-height: 400px; }
+    .card { background: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  </style>
+</head>
+<body>
+  <div class="column" id="todo"><h2>A Fazer</h2><div class="cards"></div></div>
+  <div class="column" id="in_progress"><h2>Em Progresso</h2><div class="cards"></div></div>
+  <div class="column" id="done"><h2>Concluído</h2><div class="cards"></div></div>
+
+  <script>
+    const SUPABASE_URL = 'SUA_SUPABASE_URL';
+    const SUPABASE_KEY = 'SUA_SUPABASE_ANON_KEY';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function loadTasks() {
+      const { data: tasks, error } = await supabaseClient.from('tasks').select('*');
+      if (error) return console.error(error);
+
+      document.querySelectorAll('.cards').forEach(el => el.innerHTML = '');
+      tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<strong>${task.title}</strong><br><small>Aluno: ${task.student_name}</small>`;
+        document.querySelector(`#${task.status} .cards`).appendChild(card);
+      });
+    }
+
+    loadTasks();
+  </script>
+</body>
+</html>
