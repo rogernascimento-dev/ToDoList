@@ -60,6 +60,7 @@
     async function createTask() {
       const title = document.getElementById('task-title').value.trim();
       const student = document.getElementById('student-name').value.trim();
+      const comentario = document.getElementById('comentario').value.trim();
       if (!title || !student) return;
 
       const { error } = await supabaseClient.from('tasks').insert([{ title, student_name: student, status: 'todo' }]);
