@@ -1,48 +1,86 @@
-// Vetor (Array) para armazenar a lista de tarefas
-const listaDeTarefas = [];
+    const SUPABASE_URL = 'https://lzwdqkvajhblbzsibgye.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_fCMzXffpGLX3aICD78zlWA_Nl6nj14q';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Elementos da página
-const taskInput = document.getElementById('taskInput');
-const addBtn = document.getElementById('addBtn');
-const taskList = document.getElementById('taskList');
+    let isTeacher = false;
 
-// Função para atualizar o HTML a partir do vetor
-function renderizarTarefas() {
-    taskList.innerHTML = '';
-
-    listaDeTarefas.forEach((tarefa, index) => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-            <span>${tarefa}</span>
-            <button class="delete-btn" onclick="removerTarefa(${index})">Feito</button>
-        `;
-        taskList.appendChild(li);
+    // Monitora se o professor está logado
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      isTeacher = !!session;
+      document.getElementById('teacher-panel').classList.toggle('hidden', !isTeacher);
+      document.getElementById('btn-logout').classList.toggle('hidden', !isTeacher);
+      document.getElementById('btn-login-toggle').classList.toggle('hidden', isTeacher);
+      document.getElementById('login-modal').classList.add('hidden');
+      loadTasks();
     });
-}
 
-// Função para salvar a tarefa no vetor
-function salvarTarefa() {
-    const textoTarefa = taskInput.value.trim();
-
-    if (textoTarefa !== '') {
-        listaDeTarefas.push(textoTarefa); // Salva no vetor
-        taskInput.value = '';             // Limpa o campo de texto
-        renderizarTarefas();              // Atualiza a tela
+    async function handleLogin() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) document.getElementById('login-error').innerText = "Dados inválidos.";
     }
-}
 
-// Função para remover uma tarefa do vetor
-function removerTarefa(index) {
-    listaDeTarefas.splice(index, 1);     // Remove do vetor pelo índice
-    renderizarTarefas();                 // Atualiza a tela
-}
-
-// Evento ao clicar no botão "Salvar"
-addBtn.addEventListener('click', salvarTarefa);
-
-// Evento para salvar apertando a tecla "Enter"
-taskInput.addEventListener('keypress', (event) => {
-    if (event.key === 'Enter') {
-        salvarTarefa();
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
     }
-});
+
+    function toggleLoginModal() {
+      document.getElementById('login-modal').classList.toggle('hidden');
+    }
+
+    async function loadTasks() {
+      const { data: tasks, error } = await supabaseClient.from('tasks').select('*');
+      if (error) return console.error(error);
+
+      document.querySelectorAll('.cards').forEach(el => el.innerHTML = '');
+
+      tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        let actionsHTML = '';
+        // Mostra botões de mover e excluir apenas para o professor
+        if (isTeacher) {
+          actionsHTML = `
+            <div class="card-actions">
+              ${task.status !== 'todo' ? `<button onclick="moveTask('${task.id}', 'todo')">← A Fazer</button>` : ''}
+              ${task.status !== 'in_progress' ? `<button onclick="moveTask('${task.id}', 'in_progress')">Em Progresso</button>` : ''}
+              ${task.status !== 'done' ? `<button onclick="moveTask('${task.id}', 'done')">Concluído →</button>` : ''}
+              <button onclick="deleteTask('${task.id}')" style="color:red;">X</button>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `<strong>${task.title}</strong><br><small>Aluno: ${task.student_name}</small>${actionsHTML}`;
+        document.querySelector(`#${task.status} .cards`).appendChild(card);
+      });
+    }
+
+    async function createTask() {
+      const title = document.getElementById('task-title').value.trim();
+      const student = document.getElementById('student-name').value.trim();
+      if (!title || !student) return;
+
+      const { error } = await supabaseClient.from('tasks').insert([{ title, student_name: student, status: 'todo' }]);
+      if (!error) {
+        document.getElementById('task-title').value = '';
+        document.getElementById('student-name').value = '';
+        loadTasks();
+      }
+    }
+
+    async function moveTask(id, newStatus) {
+      await supabaseClient.from('tasks').update({ status: newStatus }).eq('id', id);
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      if (confirm("Deseja excluir este projeto?")) {
+        await supabaseClient.from('tasks').delete().eq('id', id);
+        loadTasks();
+      }
+    }
+
+    // Carregamento inicial público
+    loadTasks();
