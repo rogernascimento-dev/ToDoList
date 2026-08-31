@@ -72,8 +72,32 @@ async function createTask() {
   const title = document.getElementById('task-title').value.trim();
   const student = document.getElementById('student-name').value.trim();
   const comentario = document.getElementById('comentario').value.trim();
-  
-  if (!title || !student) return;
+
+  if (!title || !student) {
+    alert("Preencha pelo menos o título e o nome do aluno!");
+    return;
+  }
+
+  const { data, error } = await supabaseClient.from('tasks').insert([
+    { 
+      title, 
+      student_name: student, 
+      comentario: comentario, 
+      status: 'todo' 
+    }
+  ]);
+
+  if (error) {
+    // Exibe o erro exato retornado pelo Supabase
+    console.error("Erro no Supabase:", error);
+    alert("Erro ao salvar no banco: " + error.message);
+  } else {
+    document.getElementById('task-title').value = '';
+    document.getElementById('student-name').value = '';
+    document.getElementById('comentario').value = '';
+    loadTasks();
+  }
+}
 
   // Inclui 'comentario' no insert do Supabase
   const { error } = await supabaseClient.from('tasks').insert([
