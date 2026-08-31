@@ -31,7 +31,7 @@ function toggleLoginModal() {
 
 async function loadTasks() {
   const { data: tasks, error } = await supabaseClient.from('tasks').select('*');
-  if (error) return console.error(error);
+  if (error) return console.error("Erro ao carregar tarefas:", error);
 
   document.querySelectorAll('.cards').forEach(el => el.innerHTML = '');
 
@@ -52,7 +52,7 @@ async function loadTasks() {
       `;
     }
 
-    // Exibe o comentário apenas se ele existir
+    // Exibe o comentário apenas se ele existir no banco
     const comentarioHTML = task.comentario 
       ? `<p class="card-comment" style="margin-top: 6px; font-size: 0.85rem; color: #475569;">💬 ${task.comentario}</p>` 
       : '';
@@ -64,7 +64,10 @@ async function loadTasks() {
       ${actionsHTML}
     `;
 
-    document.querySelector(`#${task.status} .cards`).appendChild(card);
+    const column = document.querySelector(`#${task.status} .cards`);
+    if (column) {
+      column.appendChild(card);
+    }
   });
 }
 
@@ -88,7 +91,6 @@ async function createTask() {
   ]);
 
   if (error) {
-    // Exibe o erro exato retornado pelo Supabase
     console.error("Erro no Supabase:", error);
     alert("Erro ao salvar no banco: " + error.message);
   } else {
@@ -96,26 +98,6 @@ async function createTask() {
     document.getElementById('student-name').value = '';
     document.getElementById('comentario').value = '';
     loadTasks();
-  }
-}
-
-  // Inclui 'comentario' no insert do Supabase
-  const { error } = await supabaseClient.from('tasks').insert([
-    { 
-      title, 
-      student_name: student, 
-      comentario, 
-      status: 'todo' 
-    }
-  ]);
-
-  if (!error) {
-    document.getElementById('task-title').value = '';
-    document.getElementById('student-name').value = '';
-    document.getElementById('comentario').value = '';
-    loadTasks();
-  } else {
-    console.error("Erro ao criar tarefa:", error);
   }
 }
 
