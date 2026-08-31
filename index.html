@@ -2,125 +2,142 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Sistema de Projetos - Alunos</title>
+  <title>Acompanhamento de Projetos</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: sans-serif; background: #f4f5f7; margin: 0; padding: 20px; }
     .hidden { display: none !important; }
-    
-    /* Layout Login */
-    #auth-container { max-width: 350px; margin: 80px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    #auth-container input { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
-    #auth-container button { width: 100%; padding: 10px; margin-top: 5px; cursor: pointer; }
-    
-    /* Layout Kanban */
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 15px 20px; border-radius: 8px; }
     .kanban { display: flex; gap: 20px; }
     .column { flex: 1; background: #ebecf0; padding: 15px; border-radius: 8px; min-height: 400px; }
     .card { background: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-    .card-form { margin-bottom: 15px; display: flex; gap: 5px; }
+    .card-actions { margin-top: 10px; display: flex; gap: 5px; }
+    .card-actions button { font-size: 11px; cursor: pointer; padding: 4px 8px; }
+    .admin-panel { background: #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .login-pop { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; position: absolute; right: 20px; top: 70px; }
   </style>
 </head>
 <body>
 
-  <div id="auth-container">
-    <h2>Acesso ao Sistema</h2>
-    <input type="email" id="email" placeholder="E-mail do Aluno">
-    <input type="password" id="password" placeholder="Senha">
+  <header>
+    <h2>Quadro de Projetos dos Alunos</h2>
+    <div>
+      <button id="btn-login-toggle" onclick="toggleLoginModal()">Área do Professor</button>
+      <button id="btn-logout" class="hidden" onclick="handleLogout()">Sair</button>
+    </div>
+  </header>
+
+  <!-- MODAL DE LOGIN PROFESSOR -->
+  <div id="login-modal" class="login-pop hidden">
+    <h4>Acesso Administrativo</h4>
+    <input type="email" id="email" placeholder="E-mail"><br><br>
+    <input type="password" id="password" placeholder="Senha"><br><br>
     <button onclick="handleLogin()">Entrar</button>
-    <button onclick="handleSignUp()" style="background: #e2e8f0; border: 1px solid #ccc;">Cadastrar</button>
-    <p id="auth-error" style="color: red; font-size: 14px;"></p>
+    <p id="login-error" style="color:red; font-size:12px;"></p>
   </div>
 
-  <div id="app-container" class="hidden">
-    <header>
-      <h3>Painel de Projetos</h3>
-      <div>
-        <span id="user-email"></span>
-        <button onclick="handleLogout()">Sair</button>
-      </div>
-    </header>
+  <!-- PAINEL EXCLUSIVO DO PROFESSOR (Escondido por padrão) -->
+  <div id="teacher-panel" class="admin-panel hidden">
+    <h3>Novo Projeto</h3>
+    <input type="text" id="task-title" placeholder="Nome do Projeto / Tarefa" style="width: 250px; padding: 6px;">
+    <input type="text" id="student-name" placeholder="Nome do Aluno" style="width: 200px; padding: 6px;">
+    <button onclick="createTask()">Cadastrar</button>
+  </div>
 
-    <div class="card-form">
-      <input type="text" id="task-title" placeholder="Nome do projeto / tarefa" style="flex: 1; padding: 8px;">
-      <button onclick="createTask()">Adicionar Tarefa</button>
-    </div>
-
-    <div class="kanban">
-      <div class="column" id="todo"><h2>A Fazer</h2><div class="cards"></div></div>
-      <div class="column" id="in_progress"><h2>Em Progresso</h2><div class="cards"></div></div>
-      <div class="column" id="done"><h2>Concluído</h2><div class="cards"></div></div>
-    </div>
+  <!-- KANBAN PÚBLICO -->
+  <div class="kanban">
+    <div class="column" id="todo"><h3>A Fazer</h3><div class="cards"></div></div>
+    <div class="column" id="in_progress"><h3>Em Progresso</h3><div class="cards"></div></div>
+    <div class="column" id="done"><h3>Concluído</h3><div class="cards"></div></div>
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://lzwdqkvajhblbzsibgye.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_fCMzXffpGLX3aICD78zlWA_Nl6nj14q';
+    const SUPABASE_URL = 'SUA_SUPABASE_URL';
+    const SUPABASE_KEY = 'SUA_SUPABASE_ANON_KEY';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Verificação de Sessão Inicial
+    let isTeacher = false;
+
+    // Monitora se o professor está logado
     supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        document.getElementById('auth-container').classList.add('hidden');
-        document.getElementById('app-container').classList.remove('hidden');
-        document.getElementById('user-email').innerText = session.user.email;
-        loadTasks();
-      } else {
-        document.getElementById('auth-container').classList.remove('hidden');
-        document.getElementById('app-container').classList.add('hidden');
-      }
+      isTeacher = !!session;
+      document.getElementById('teacher-panel').classList.toggle('hidden', !isTeacher);
+      document.getElementById('btn-logout').classList.toggle('hidden', !isTeacher);
+      document.getElementById('btn-login-toggle').classList.toggle('hidden', isTeacher);
+      document.getElementById('login-modal').classList.add('hidden');
+      loadTasks();
     });
 
-    // Autenticação
     async function handleLogin() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) document.getElementById('auth-error').innerText = error.message;
-    }
-
-    async function handleSignUp() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const { error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) document.getElementById('auth-error').innerText = error.message;
-      else alert('Cadastro realizado! Se o Supabase exigir confirmação, verifique seu e-mail.');
+      if (error) document.getElementById('login-error').innerText = "Dados inválidos.";
     }
 
     async function handleLogout() {
       await supabaseClient.auth.signOut();
     }
 
-    // Operações do Kanban
+    function toggleLoginModal() {
+      document.getElementById('login-modal').classList.toggle('hidden');
+    }
+
     async function loadTasks() {
       const { data: tasks, error } = await supabaseClient.from('tasks').select('*');
       if (error) return console.error(error);
 
       document.querySelectorAll('.cards').forEach(el => el.innerHTML = '');
+
       tasks.forEach(task => {
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = `<strong>${task.title}</strong><br><small>Aluno: ${task.student_name}</small>`;
+        
+        let actionsHTML = '';
+        // Mostra botões de mover e excluir apenas para o professor
+        if (isTeacher) {
+          actionsHTML = `
+            <div class="card-actions">
+              ${task.status !== 'todo' ? `<button onclick="moveTask('${task.id}', 'todo')">← A Fazer</button>` : ''}
+              ${task.status !== 'in_progress' ? `<button onclick="moveTask('${task.id}', 'in_progress')">Em Progresso</button>` : ''}
+              ${task.status !== 'done' ? `<button onclick="moveTask('${task.id}', 'done')">Concluído →</button>` : ''}
+              <button onclick="deleteTask('${task.id}')" style="color:red;">X</button>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `<strong>${task.title}</strong><br><small>Aluno: ${task.student_name}</small>${actionsHTML}`;
         document.querySelector(`#${task.status} .cards`).appendChild(card);
       });
     }
 
     async function createTask() {
-      const titleInput = document.getElementById('task-title');
-      const title = titleInput.value.trim();
-      if (!title) return;
+      const title = document.getElementById('task-title').value.trim();
+      const student = document.getElementById('student-name').value.trim();
+      if (!title || !student) return;
 
-      const user = (await supabaseClient.auth.getUser()).data.user;
-      
-      const { error } = await supabaseClient.from('tasks').insert([
-        { title: title, student_name: user.email.split('@')[0], status: 'todo' }
-      ]);
-
+      const { error } = await supabaseClient.from('tasks').insert([{ title, student_name: student, status: 'todo' }]);
       if (!error) {
-        titleInput.value = '';
+        document.getElementById('task-title').value = '';
+        document.getElementById('student-name').value = '';
         loadTasks();
       }
     }
+
+    async function moveTask(id, newStatus) {
+      await supabaseClient.from('tasks').update({ status: newStatus }).eq('id', id);
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      if (confirm("Deseja excluir este projeto?")) {
+        await supabaseClient.from('tasks').delete().eq('id', id);
+        loadTasks();
+      }
+    }
+
+    // Carregamento inicial público
+    loadTasks();
   </script>
 </body>
 </html>
