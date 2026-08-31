@@ -2,167 +2,125 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro - Supabase</title>
+  <title>Sistema de Projetos - Alunos</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    body {
-      background-color: #f4f6f8;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-    }
-
-    .container {
-      background-color: #ffffff;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 400px;
-    }
-
-    h2 {
-      margin-top: 0;
-      color: #333;
-      text-align: center;
-    }
-
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 5px;
-      color: #666;
-      font-weight: 600;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #3ecf8e; /* Cor do Supabase */
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #3ecf8e;
-      border: none;
-      border-radius: 5px;
-      color: white;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background-color: #34b27b;
-    }
-
-    button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-
-    #mensagem {
-      margin-top: 15px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: bold;
-    }
-
-    .sucesso { color: #2e7d32; }
-    .erro { color: #d32f2f; }
+    body { font-family: sans-serif; background: #f4f5f7; margin: 0; padding: 20px; }
+    .hidden { display: none !important; }
+    
+    /* Layout Login */
+    #auth-container { max-width: 350px; margin: 80px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    #auth-container input { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
+    #auth-container button { width: 100%; padding: 10px; margin-top: 5px; cursor: pointer; }
+    
+    /* Layout Kanban */
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .kanban { display: flex; gap: 20px; }
+    .column { flex: 1; background: #ebecf0; padding: 15px; border-radius: 8px; min-height: 400px; }
+    .card { background: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .card-form { margin-bottom: 15px; display: flex; gap: 5px; }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Novo Cadastro</h2>
-    <form id="cadastroForm">
-      <div class="form-group">
-        <label for="nome">Nome Completo</label>
-        <input type="text" id="nome" placeholder="Ex: João Silva" required>
-      </div>
-
-      <div class="form-group">
-        <label for="telefone">Telefone</label>
-        <input type="tel" id="telefone" placeholder="Ex: (11) 99999-9999" required>
-      </div>
-
-      <button type="submit" id="btnSalvar">Cadastrar</button>
-    </form>
-
-    <div id="mensagem"></div>
+  <div id="auth-container">
+    <h2>Acesso ao Sistema</h2>
+    <input type="email" id="email" placeholder="E-mail do Aluno">
+    <input type="password" id="password" placeholder="Senha">
+    <button onclick="handleLogin()">Entrar</button>
+    <button onclick="handleSignUp()" style="background: #e2e8f0; border: 1px solid #ccc;">Cadastrar</button>
+    <p id="auth-error" style="color: red; font-size: 14px;"></p>
   </div>
 
-  <!-- Biblioteca Oficial do Supabase via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <div id="app-container" class="hidden">
+    <header>
+      <h3>Painel de Projetos</h3>
+      <div>
+        <span id="user-email"></span>
+        <button onclick="handleLogout()">Sair</button>
+      </div>
+    </header>
+
+    <div class="card-form">
+      <input type="text" id="task-title" placeholder="Nome do projeto / tarefa" style="flex: 1; padding: 8px;">
+      <button onclick="createTask()">Adicionar Tarefa</button>
+    </div>
+
+    <div class="kanban">
+      <div class="column" id="todo"><h2>A Fazer</h2><div class="cards"></div></div>
+      <div class="column" id="in_progress"><h2>Em Progresso</h2><div class="cards"></div></div>
+      <div class="column" id="done"><h2>Concluído</h2><div class="cards"></div></div>
+    </div>
+  </div>
 
   <script>
-    // -------------------------------------------------------------
-    // CONFIGURAÇÃO DO SUPABASE
-    // Substitua os valores abaixo com os dados do seu projeto Supabase:
-    // -------------------------------------------------------------
-    const SUPABASE_URL = 'https://lzwdqkvajhblbzsibgye.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_fCMzXffpGLX3aICD78zlWA_Nl6nj14q';
-
-    // Inicializa o cliente do Supabase
+    const SUPABASE_URL = 'SUA_SUPABASE_URL';
+    const SUPABASE_KEY = 'SUA_SUPABASE_ANON_KEY';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Captura dos elementos HTML
-    const form = document.getElementById('cadastroForm');
-    const btnSalvar = document.getElementById('btnSalvar');
-    const mensagemEl = document.getElementById('mensagem');
-
-    // Evento de envio do formulário
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault(); // Impede o recarregamento da página
-
-      const nome = document.getElementById('nome').value;
-      const telefone = document.getElementById('telefone').value;
-
-      // Estado de carregamento
-      btnSalvar.disabled = true;
-      btnSalvar.innerText = 'Salvando...';
-      mensagemEl.innerText = '';
-      mensagemEl.className = '';
-
-      // Envia os dados para a tabela 'contatos' no Supabase
-      const { data, error } = await supabaseClient
-        .from('contatos')
-        .insert([{ nome: nome, telefone: telefone }]);
-
-      // Restaura o botão
-      btnSalvar.disabled = false;
-      btnSalvar.innerText = 'Cadastrar';
-
-      if (error) {
-        console.error('Erro:', error);
-        mensagemEl.innerText = 'Erro ao salvar os dados!';
-        mensagemEl.className = 'erro';
+    // Verificação de Sessão Inicial
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        document.getElementById('auth-container').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        document.getElementById('user-email').innerText = session.user.email;
+        loadTasks();
       } else {
-        mensagemEl.innerText = 'Cadastro realizado com sucesso!';
-        mensagemEl.className = 'sucesso';
-        form.reset(); // Limpa o formulário
+        document.getElementById('auth-container').classList.remove('hidden');
+        document.getElementById('app-container').classList.add('hidden');
       }
     });
+
+    // Autenticação
+    async function handleLogin() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) document.getElementById('auth-error').innerText = error.message;
+    }
+
+    async function handleSignUp() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) document.getElementById('auth-error').innerText = error.message;
+      else alert('Cadastro realizado! Se o Supabase exigir confirmação, verifique seu e-mail.');
+    }
+
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
+    }
+
+    // Operações do Kanban
+    async function loadTasks() {
+      const { data: tasks, error } = await supabaseClient.from('tasks').select('*');
+      if (error) return console.error(error);
+
+      document.querySelectorAll('.cards').forEach(el => el.innerHTML = '');
+      tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<strong>${task.title}</strong><br><small>Aluno: ${task.student_name}</small>`;
+        document.querySelector(`#${task.status} .cards`).appendChild(card);
+      });
+    }
+
+    async function createTask() {
+      const titleInput = document.getElementById('task-title');
+      const title = titleInput.value.trim();
+      if (!title) return;
+
+      const user = (await supabaseClient.auth.getUser()).data.user;
+      
+      const { error } = await supabaseClient.from('tasks').insert([
+        { title: title, student_name: user.email.split('@')[0], status: 'todo' }
+      ]);
+
+      if (!error) {
+        titleInput.value = '';
+        loadTasks();
+      }
+    }
   </script>
 </body>
 </html>
